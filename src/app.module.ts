@@ -10,9 +10,10 @@ import { AuthModule } from './auth/auth.module';
 import { DBModule } from './database/db.module';
 import { InviteModule } from './v1/invite/invite.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { CompaniesModule } from './v1/companies/companies.module';
 
 @Module({
-  imports: [UsersModule, AuthModule, DBModule, InviteModule],
+  imports: [UsersModule, AuthModule, DBModule, InviteModule, CompaniesModule],
   controllers: [AppController, UsersController],
   providers: [
     AppService,
