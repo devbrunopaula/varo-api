@@ -45,6 +45,7 @@ export class CompaniesService {
       email: createCompanyDto.email,
       password: await bcrypt.hash(createCompanyDto.password, 10),
       role: Role.ADMIN,
+      companyId: newCompany.id,
     };
     const newUser = await this.db.user.create({ data });
 
@@ -54,6 +55,7 @@ export class CompaniesService {
         lastName: createCompanyDto.lastName,
         phone: createCompanyDto.phone,
         userId: newUser.id,
+        companyId: newCompany.id,
       },
     });
     await this.db.companyUser.create({
