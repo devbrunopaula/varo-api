@@ -10,38 +10,62 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
+model Company {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  CompanyUser CompanyUser[]
+}
+
 model User {
-  id           String         @id @default(cuid())
-  email        String         @unique
-  username     String         @unique
-  displayName  String?
-  name         String?
-  password     String
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  UserSettings UserSettings[]
-  Post         Post[]
+  id          String        @id @default(cuid())
+  email       String        @unique
+  username    String?       @unique
+  displayName String?
+  password    String
+  role        Role          @default(USER)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  CompanyUser CompanyUser[]
+  Profile     Profile[]
 }
 
-model UserSettings {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id])
-  theme         String?
-  notifications Boolean?
-  sms           Boolean?
-  language      String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+model Profile {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  firstName String?
+  lastName  String?
+  phone     String?
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-model Post {
-  id          String   @id @default(cuid())
-  title       String
-  description String
-  published   Boolean  @default(false)
-  authorId    String
-  author      User     @relation(fields: [authorId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model CompanyUser {
+  id        String   @id @default(cuid())
+  company   Company  @relation(fields: [companyId], references: [id])
+  companyId String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Invitation {
+  id        String   @id @default(cuid())
+  email     String
+  token     String
+  invitedBy String
+  role      Role     @default(USER)
+  companyId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

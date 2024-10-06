@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { CreateUserDto } from './dto/create-user.dto';
+import { IsPublic } from 'src/decorators/is-public.decorator';
 
 @Controller('users')
 export class UsersController {
@@ -10,9 +12,10 @@ export class UsersController {
     return await this.usersService.getAllUsers();
   }
 
+  @IsPublic()
   @Post()
-  async createUser(@Body() user) {
-    return await this.usersService.createUser(user);
+  create(@Body() createUserDto: CreateUserDto) {
+    return this.usersService.create(createUserDto);
   }
   @Get(':id')
   async getUserById(@Param('id') id: string) {
