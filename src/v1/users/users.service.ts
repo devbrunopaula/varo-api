@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { DBService } from 'src/database/db.service';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from './entities/user.entity';
+import { IsPublic } from 'src/decorators/is-public.decorator';
 
 @Injectable()
 export class UsersService {
@@ -12,7 +13,15 @@ export class UsersService {
   getAllUsers() {
     return this.db.user.findMany();
   }
+
   async create(createUserDto: CreateUserDto): Promise<User> {
+    const existingUser = await this.db.user.findUnique({
+      where: { email: createUserDto.email },
+    });
+
+    if (existingUser) {
+      throw new BadRequestException('User already exists');
+    }
     const data: Prisma.UserCreateInput = {
       ...createUserDto,
       password: await bcrypt.hash(createUserDto.password, 10),
