@@ -28,7 +28,8 @@ model Company {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  users CompanyUser[]
+  users    CompanyUser[]
+  AuditLog AuditLog[]
 
   @@index([name])
 }
@@ -49,6 +50,7 @@ model User {
   invitedToken String?
 
   companies CompanyUser[]
+  AuditLog  AuditLog[]
 }
 
 model CompanyUser {
@@ -101,4 +103,15 @@ model Invitation {
   updatedAt DateTime         @updatedAt
 
   @@index([token])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String
+  action      String // e.g., "LOGIN", "CREATE_COMPANY", etc.
+  tenantId    String? // ID of the entity being affected, if applicable
+  description String? // More context about the action
+  createdAt   DateTime @default(now())
+  tenant      Company? @relation(fields: [tenantId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

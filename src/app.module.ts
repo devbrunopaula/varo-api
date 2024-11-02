@@ -15,6 +15,7 @@ import { TenantModule } from './tenant/tenant.module';
 
 import { MailerModule } from './mailer/mailer.module';
 import { ConfigModule } from '@nestjs/config';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
@@ -25,7 +26,8 @@ import { ConfigModule } from '@nestjs/config';
     CompaniesModule,
     TenantModule,
     MailerModule,
-    ConfigModule.forRoot()
+    ConfigModule.forRoot(),
+    AuditModule
   ],
   controllers: [AppController, UsersController],
   providers: [
