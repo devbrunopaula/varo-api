@@ -1,26 +1,63 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateInviteDto } from './dto/create-invite.dto';
-import { UpdateInviteDto } from './dto/update-invite.dto';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { DBService } from 'src/database/db.service';
-import { Role } from '@prisma/client';
+import { InvitationStatus, Role } from '@prisma/client';
+
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class InviteService {
-  constructor(private readonly db: DBService) {}
+  constructor(
+    private readonly db: DBService,
+    private userService: UsersService
+  ) {}
 
-  async create(createInviteDto: CreateInviteDto, invitedBy: string) {
+  async create(payload, invitedBy: string) {
     const token = await this.generateInviteToken(); // Generate a token for invite acceptance
+
+    const pendingInvitation = await this.db.invitation.findFirst({
+      where: {
+        email: payload.email
+      }
+    });
+    const existingUser = await this.db.user.findFirst({
+      where: {
+        email: payload.email
+      }
+    });
+
+    if (existingUser) {
+      throw new BadRequestException('User already exists');
+    }
+
+    if (pendingInvitation) {
+      throw new BadRequestException('Pending invitation already exists');
+    }
+
+    // Check if the logged-in user is an admin
+    const invitedByUser = await this.db.user.findFirst({
+      where: { id: invitedBy }
+    });
+    console.log('invitedByUser', invitedByUser);
+
+    if (invitedByUser?.role !== Role.ADMIN) {
+      throw new NotFoundException('User Must be an admin to invite users');
+    }
 
     const invitation = await this.db.invitation.create({
       data: {
-        email: createInviteDto.email,
+        ...payload,
         role: Role.USER, // default role
         invitedBy, // logged-in user's ID
         token, // generated invite token
-        companyId: await this.getCompanyIdOfUser(invitedBy), // get inviter's companyId
-      },
+        companyId: await this.getCompanyIdOfUser(invitedBy) // logged-in user's company ID
+      }
     });
+    console.log('invitation', await this.getCompanyIdOfUser(invitedBy));
 
     // Send email with token link
     // await this.emailService.sendInviteEmail(email, token);
@@ -32,16 +69,81 @@ export class InviteService {
     return `This action returns all invite`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} invite`;
+  async findOne(token: string) {
+    return await this.db.invitation.findFirst({ where: { token } });
   }
 
-  update(id: number, updateInviteDto: UpdateInviteDto) {
-    return `This action updates a #${id} invite`;
+  // Accept the invitation
+  async accept(payload) {
+    const invitation = await this.db.invitation.findFirst({
+      where: {
+        token: payload.token,
+        status: InvitationStatus.PENDING
+      }
+    });
+    console.log('invitation', invitation);
+
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found or expired.');
+    }
+
+    const hashedPassword = await this.hashPassword(payload.password);
+
+    // Update the invitation status to ACCEPTED
+    const updateInvitation = await this.db.invitation.update({
+      where: {
+        id: invitation.id,
+        token: payload.token
+      },
+      data: {
+        status: InvitationStatus.ACCEPTED
+      }
+    });
+
+    if (updateInvitation.status === 'ACCEPTED') {
+      const existingUser = await this.db.user.findFirst({
+        where: {
+          email: invitation.email
+        }
+      });
+
+      if (existingUser) {
+        throw new BadRequestException('User already exists');
+      }
+
+      // Create the user based on the invitation details
+      const newUser = await this.db.user.create({
+        data: {
+          email: invitation.email,
+          password: hashedPassword,
+          role: invitation.role,
+          companyId: invitation.companyId,
+          invitedToken: invitation.token,
+
+          profile: {
+            create: {}
+          },
+          employee: {
+            create: {
+              firstName: invitation.firstName,
+              lastName: invitation.lastName,
+              email: invitation.email,
+              phone: payload.phone
+            }
+          }
+        }
+      });
+
+      // Create the employee and connect it with the newly created user
+
+      return newUser;
+    }
+
+    throw new NotFoundException('Could not create user');
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} invite`;
+  hashPassword(password: string) {
+    return bcrypt.hash(password, 10);
   }
 
   generateInviteToken() {
@@ -51,47 +153,9 @@ export class InviteService {
   async getCompanyIdOfUser(userId: string) {
     // Fetch the companyId of the logged-in user
     const user = await this.db.user.findUnique({
-      where: { id: userId },
-      include: { Profile: true },
+      where: { id: userId }
     });
+
     return user?.companyId;
-  }
-
-  async accept({ token, password }) {
-    const invitation = await this.db.invitation.findFirst({
-      where: { token },
-    });
-
-    if (!invitation) {
-      throw new NotFoundException('Invitation not found or expired.');
-    }
-
-    const hashedPassword = await this.hashPassword(password);
-
-    // Create the user with the invite details
-    const user = await this.db.user.create({
-      data: {
-        email: invitation.email,
-        password: hashedPassword,
-        role: invitation.role,
-        companyId: invitation.companyId,
-      },
-    });
-
-    await this.db.profile.create({
-      data: {
-        userId: user.id,
-        companyId: invitation.companyId,
-      },
-    });
-
-    // Remove the invitation record after acceptance
-    await this.db.invitation.delete({ where: { id: invitation.id } });
-
-    return user;
-  }
-
-  hashPassword(password: string) {
-    return bcrypt.hash(password, 10);
   }
 }

@@ -15,61 +15,54 @@ export class CompaniesService {
   ) {}
 
   async create(createCompanyDto: CreateCompanyDto) {
-    const existingCompany = await this.db.company.findFirst({
-      where: {
-        name: createCompanyDto.name,
-      },
-    });
-
-    if (existingCompany) {
-      throw new BadRequestException('Company already exists');
-    }
-
-    const existingUser = await this.db.user.findFirst({
-      where: {
-        email: createCompanyDto.email,
-      },
-    });
-
-    if (existingUser) {
-      throw new BadRequestException('User already exists');
-    }
-
-    const newCompany = await this.db.company.create({
-      data: {
-        name: createCompanyDto.name,
-      },
-    });
-
-    const data: Prisma.UserCreateInput = {
-      email: createCompanyDto.email,
-      password: await bcrypt.hash(createCompanyDto.password, 10),
-      role: Role.ADMIN,
-      companyId: newCompany.id,
-    };
-    const newUser = await this.db.user.create({ data });
-
-    await this.db.profile.create({
-      data: {
-        firstName: createCompanyDto.firstName,
-        lastName: createCompanyDto.lastName,
-        phone: createCompanyDto.phone,
-        userId: newUser.id,
-        companyId: newCompany.id,
-      },
-    });
-    await this.db.companyUser.create({
-      data: {
-        companyId: newCompany.id,
-        userId: newUser.id,
-      },
-    });
-
-    return {
-      ...newCompany,
-      ...newUser,
-      password: undefined,
-    };
+    // const existingCompany = await this.db.company.findFirst({
+    //   where: {
+    //     name: createCompanyDto.name,
+    //   },
+    // });
+    // if (existingCompany) {
+    //   throw new BadRequestException('Company already exists');
+    // }
+    // const existingUser = await this.db.user.findFirst({
+    //   where: {
+    //     email: createCompanyDto.email,
+    //   },
+    // });
+    // if (existingUser) {
+    //   throw new BadRequestException('User already exists');
+    // }
+    // const newCompany = await this.db.company.create({
+    //   data: {
+    //     name: createCompanyDto.name,
+    //   },
+    // });
+    // const data: Prisma.UserCreateInput = {
+    //   email: createCompanyDto.email,
+    //   password: await bcrypt.hash(createCompanyDto.password, 10),
+    //   role: Role.ADMIN,
+    //   companyId: newCompany.id,
+    // };
+    // const newUser = await this.db.user.create({ data });
+    // await this.db.profile.create({
+    //   data: {
+    //     firstName: createCompanyDto.firstName,
+    //     lastName: createCompanyDto.lastName,
+    //     phone: createCompanyDto.phone,
+    //     userId: newUser.id,
+    //     companyId: newCompany.id,
+    //   },
+    // });
+    // await this.db.companyUser.create({
+    //   data: {
+    //     companyId: newCompany.id,
+    //     userId: newUser.id,
+    //   },
+    // });
+    // return {
+    //   ...newCompany,
+    //   ...newUser,
+    //   password: undefined,
+    // };
   }
 
   findAll() {

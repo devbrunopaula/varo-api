@@ -1,27 +1,27 @@
-import { User } from '../entities/user.entity';
+import { User } from '../../v1/users/entities/user.entity';
 import {
   IsEmail,
-  IsOptional,
   IsString,
   Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
 
-export class CreateUserDto extends User {
+export class RegisterAuthDto extends User {
+  @IsString()
+  firstName: string;
+
+  @IsString()
+  lastName: string;
+
+  @IsString()
+  companyName: string;
+
   @IsEmail()
   email: string;
 
   @IsString()
-  @IsOptional()
-  token: string;
-
-  @IsOptional()
-  @IsString()
-  username?: string;
-  @IsString()
-  @IsOptional()
-  displayName?: string;
+  phone: string;
 
   @IsString()
   @MinLength(4)

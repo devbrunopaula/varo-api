@@ -11,9 +11,22 @@ import { DBModule } from './database/db.module';
 import { InviteModule } from './v1/invite/invite.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { CompaniesModule } from './v1/companies/companies.module';
+import { TenantModule } from './tenant/tenant.module';
+
+import { MailerModule } from './mailer/mailer.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [UsersModule, AuthModule, DBModule, InviteModule, CompaniesModule],
+  imports: [
+    UsersModule,
+    AuthModule,
+    DBModule,
+    InviteModule,
+    CompaniesModule,
+    TenantModule,
+    MailerModule,
+    ConfigModule.forRoot()
+  ],
   controllers: [AppController, UsersController],
   providers: [
     AppService,
@@ -21,8 +34,8 @@ import { CompaniesModule } from './v1/companies/companies.module';
     UsersService,
     {
       provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
-  ],
+      useClass: JwtAuthGuard
+    }
+  ]
 })
 export class AppModule {}

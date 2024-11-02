@@ -10,11 +10,16 @@ export class UsersService {
   constructor(private readonly db: DBService) {}
 
   getAllUsers() {
-    return this.db.user.findMany();
+    return this.db.user.findMany({
+      include: {
+        employee: true,
+      },
+    });
   }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    const existingUser = this.findByEmail(createUserDto.email);
+    const existingUser = await this.findByEmail(createUserDto.email);
+    console.log(existingUser);
 
     if (existingUser) {
       throw new BadRequestException('User already exists');
@@ -24,7 +29,9 @@ export class UsersService {
       password: await bcrypt.hash(createUserDto.password, 10),
     };
 
-    const createdUser = await this.db.user.create({ data });
+    const createdUser = await this.db.user.create({
+      data,
+    });
 
     return {
       ...createdUser,

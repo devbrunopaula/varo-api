@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -7,12 +7,15 @@ import { UsersService } from 'src/v1/users/users.service';
 import { UserToken } from './models/UserToken';
 import { UserPayload } from './models/UserPayload';
 import { User } from 'src/v1/users/entities/user.entity';
+import { DBService } from 'src/database/db.service';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
+    private readonly db: DBService
   ) {}
 
   async validateUser(email: string, password: string): Promise<User> {
@@ -24,57 +27,86 @@ export class AuthService {
       if (isPasswordValid) {
         return {
           ...user,
-          password: undefined,
+          password: undefined
         };
       }
     }
 
     throw new UnauthorizedError(
-      'Email address or password provided is incorrect.',
+      'Email address or password provided is incorrect.'
     );
   }
 
-  // async createUser(payload) {
-  //   const newCompany = await this.db.company.create({
-  //     data: {
-  //       name: payload.companyName,
-  //       description: 'Company description',
-  //     },
-  //   });
+  async register(payload) {
+    // Check if user already exists
+    const existingUser = await this.db.user.findUnique({
+      where: {
+        email: payload.email
+      }
+    });
 
-  //   const newUser = await this.db.user.create({
-  //     data: {
-  //       email: payload.email,
-  //       password: payload.password,
-  //       username: payload.username,
-  //       Profile: {
-  //         create: {
-  //           firstName: payload.firstName,
-  //           lastName: payload.lastName,
-  //           phone: payload.phone,
-  //         },
-  //       },
-  //     },
-  //   });
+    if (existingUser) {
+      throw new BadRequestException('User already exists');
+    }
 
-  //   await this.db.companyUser.create({
-  //     data: {
-  //       userId: newUser.id,
-  //       companyId: newCompany.id,
-  //     },
-  //   });
+    // Check for pending user invitation
 
-  //   return newUser;
-  // }
+    const existingInvitation = await this.db.invitation.findFirst({
+      where: {
+        email: payload.email
+      }
+    });
+
+    if (existingInvitation) {
+      throw new BadRequestException('User already invited');
+    }
+
+    const newCompany = await this.db.company.create({
+      data: {
+        name: payload.companyName,
+        description: ''
+      }
+    });
+
+    const hashPassword = await bcrypt.hash(payload.password, 10);
+
+    const newUser = await this.db.user.create({
+      data: {
+        email: payload.email,
+        password: hashPassword,
+        role: Role.ADMIN,
+        companyId: newCompany.id,
+        profile: {
+          create: {}
+        },
+        employee: {
+          create: {
+            firstName: payload.firstName,
+            lastName: payload.lastName,
+            email: payload.email,
+            phone: payload.phone
+          }
+        }
+      }
+    });
+
+    // Create entry in CompanyUser pivot table
+    await this.db.companyUser.create({
+      data: {
+        companyId: newCompany.id,
+        userId: newUser.id
+      }
+    });
+  }
 
   async login(user: User): Promise<UserToken> {
     const payload: UserPayload = {
       sub: user.id,
-      email: user.email,
+      email: user.email
     };
 
     return {
-      access_token: this.jwtService.sign(payload),
+      access_token: this.jwtService.sign(payload)
     };
   }
 }
