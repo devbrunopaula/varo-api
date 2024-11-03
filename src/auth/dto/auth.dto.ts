@@ -1,10 +1,9 @@
 export class AuthPayloadDto {
-  id: string;
   email: string;
-  username: string;
-  displayName: string | null;
-  name: string | null;
+  firstName: string;
+  lastName: string;
   password: string;
-  createdAt: Date;
-  updatedAt: Date;
+  username: string | null;
+  companyName: string;
+  phone: string;
 }

@@ -1,18 +1,12 @@
-import {
-  Injectable,
-  Global,
-  OnModuleInit,
-  OnModuleDestroy,
-} from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
-@Global()
 @Injectable()
 export class DBService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
-  onModuleInit() {
+  async onModuleInit() {
     this.$connect()
       .then(() => console.log('Database connected'))
       .catch((error) => console.error(error, 'Database connection failed'));

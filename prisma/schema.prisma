@@ -10,38 +10,95 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id           String         @id @default(cuid())
-  email        String         @unique
-  username     String         @unique
-  displayName  String?
-  name         String?
-  password     String
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  UserSettings UserSettings[]
-  Post         Post[]
+enum Role {
+  USER
+  ADMIN
 }
 
-model UserSettings {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id])
-  theme         String?
-  notifications Boolean?
-  sms           Boolean?
-  language      String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
 }
 
-model Post {
+model Company {
   id          String   @id @default(cuid())
-  title       String
-  description String
-  published   Boolean  @default(false)
-  authorId    String
-  author      User     @relation(fields: [authorId], references: [id])
+  name        String
+  description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  users CompanyUser[]
+
+  @@index([name])
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  username    String?  @unique
+  displayName String?
+  password    String
+  role        Role     @default(USER)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  profile      Profile?
+  companyId    String?
+  employee     Employee?
+  invitedToken String?
+
+  companies CompanyUser[]
+}
+
+model CompanyUser {
+  id        String   @id @default(cuid())
+  company   Company  @relation(fields: [companyId], references: [id])
+  companyId String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, userId]) // Ensures the same user can't belong to the same company more than once
+}
+
+model Employee {
+  id        String @id @default(cuid())
+  user      User   @relation(fields: [userId], references: [id])
+  userId    String @unique
+  firstName String
+  lastName  String
+  email     String
+  phone     String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Profile {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String   @unique
+  sidebar   Boolean  @default(true)
+  theme     String   @default("light")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Invitation {
+  id        String           @id @default(cuid())
+  email     String?          @unique()
+  token     String
+  invitedBy String
+  firstName String?
+  lastName  String?
+  phone     String?
+  status    InvitationStatus @default(PENDING)
+  role      Role             @default(USER)
+  companyId String
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([token])
 }
